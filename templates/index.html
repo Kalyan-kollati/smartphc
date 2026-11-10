@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart PHC System - Avanigadda, Repalle, Pamarru, Gudlavalleru</title>
+    <style>
+        :root {
+            --primary-blue: #0f4c81;
+            --primary-hover: #0a365c;
+            --accent-green: #2e7d32;
+            --accent-red: #c62828;
+            --bg-gray: #f4f7f9;
+            --card-bg: #ffffff;
+            --text-main: #2c3e50;
+            --text-muted: #6c757d;
+            --border-color: #dcdfe6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-gray); color: var(--text-main); line-height: 1.6; }
+
+        header {
+            background-color: var(--primary-blue);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header-title h1 { font-size: 1.4rem; }
+        .header-title p { font-size: 0.85rem; opacity: 0.9; }
+
+        .header-controls { display: flex; gap: 1rem; align-items: center; }
+
+        .btn-toggle {
+            background-color: white;
+            color: var(--primary-blue);
+            border: 2px solid white;
+            padding: 0.4rem 1rem;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-toggle:hover { background-color: var(--primary-hover); color: white; }
+
+        nav {
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+
+        .nav-tab {
+            padding: 1rem 1.2rem;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        .nav-tab.active { color: var(--primary-blue); border-bottom-color: var(--primary-blue); }
+
+        .container { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid var(--border-color);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .badge-available { background-color: #e8f5e9; color: var(--accent-green); }
+        .badge-busy { background-color: #ffebee; color: var(--accent-red); }
+
+        .form-group { margin-bottom: 1.2rem; }
+        label { display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem; }
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 0.8rem;
+            background-color: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .btn-submit:hover { background-color: var(--primary-hover); }
+
+        .status-card, .report-card {
+            background-color: #eef6fc;
+            border-left: 4px solid var(--primary-blue);
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1 id="txt-app-title">Smart PHC Healthcare Portal</h1>
+            <p id="txt-app-subtitle">Avanigadda | Repalle | Pamarru | Gudlavalleru</p>
+        </div>
+        <div class="header-controls">
+            <button class="btn-toggle" onclick="switchPortal()" id="btn-portal-switch">Doctor Login</button>
+            <button class="btn-toggle" onclick="toggleLanguage()" id="txt-lang-toggle">తెలుగు</button>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav id="patient-nav">
+        <button class="nav-tab active" onclick="switchTab('doctors-tab', this)" id="tab-doc">Doctor Directory</button>
+        <button class="nav-tab" onclick="switchTab('booking-tab', this)" id="tab-book">Book Appointment</button>
+        <button class="nav-tab" onclick="switchTab('status-tab', this)" id="tab-status">Booking Status</button>
+        <button class="nav-tab" onclick="switchTab('reports-tab', this)" id="tab-reports">Medical Reports</button>
+    </nav>
+
+    <div class="container">
+        
+        <!-- Tab 1: Doctors Directory with PHC Location Filter -->
+        <section id="doctors-tab" class="tab-content active">
+            <div style="margin-bottom: 1.5rem; max-width: 400px;">
+                <label id="lbl-filter-loc">Select PHC Hospital Location:</label>
+                <select id="location-filter" onchange="loadDoctorsForSelectedLocation()"></select>
+            </div>
+            <h2 id="txt-doc-heading" style="margin-bottom: 1rem;">Doctors Available at Location</h2>
+            <div class="card-grid" id="doctors-container"></div>
+        </section>
+
+        <!-- Tab 2: Appointment Booking with Date Selector -->
+        <section id="booking-tab" class="tab-content">
+            <div class="card" style="max-width: 600px; margin: 0 auto;">
+                <h2 style="margin-bottom: 1.5rem;" id="txt-form-heading">Book Appointment</h2>
+                <form id="appointment-form" onsubmit="handleBooking(event)">
+                    <div class="form-group">
+                        <label id="lbl-booking-loc">Select PHC Location</label>
+                        <select id="booking-loc-select" onchange="loadDoctorsForBooking()"></select>
+                    </div>
+                    <div class="form-group">
+                        <label id="lbl-appt-date">Select Appointment Date</label>
+                        <input type="date" id="appt-date-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label id="lbl-uid">Unique ID / Identity Card Number</label>
+                        <input type="text" id="uid-input" required placeholder="Enter ID (e.g. PAT-90812 / Health ID)">
+                    </div>
+                    <div class="form-group">
+                        <label id="lbl-patient-name">Patient Full Name</label>
+                        <input type="text" id="name-input" required placeholder="Enter patient name">
+                    </div>
+                    <div class="form-group">
+                        <label id="lbl-select-doc">Select Available Doctor</label>
+                        <select id="doc-select" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label id="lbl-select-slot">Preferred Time Slot</label>
+                        <select id="slot-select" required>
+                            <option value="09:00 AM - 10:00 AM">09:00 AM - 10:00 AM</option>
+                            <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
+                            <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</option>
+                            <option value="02:00 PM - 03:00 PM">02:00 PM - 03:00 PM</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-submit" id="btn-confirm-booking">Generate Token</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Tab 3: Dedicated Patient Booking Status -->
+        <section id="status-tab" class="tab-content">
+            <div class="card" style="max-width: 650px; margin: 0 auto;">
+                <h2 id="txt-status-heading" style="margin-bottom: 1.5rem;">Check Appointment Status</h2>
+                <div class="form-group">
+                    <label id="lbl-status-uid">Enter Unique ID / Patient ID</label>
+                    <input type="text" id="status-uid-input" placeholder="e.g. PAT-90812">
+                </div>
+                <button class="btn-submit" onclick="fetchPatientBookingStatus()" id="btn-check-status">Search Booking Records</button>
+                <div id="status-results" style="margin-top: 1.5rem;"></div>
+            </div>
+        </section>
+
+        <!-- Tab 4: Patient Reports Storage View -->
+        <section id="reports-tab" class="tab-content">
+            <div class="card" style="max-width: 650px; margin: 0 auto;">
+                <h2 id="txt-reports-heading" style="margin-bottom: 1.5rem;">Patient Diagnostic & Health Reports</h2>
+                <div class="form-group">
+                    <label id="lbl-reports-uid">Enter Unique ID / Patient ID</label>
+                    <input type="text" id="reports-uid-input" placeholder="e.g. PAT-90812">
+                </div>
+                <button class="btn-submit" onclick="fetchPatientReports()" id="btn-check-reports">View Health Reports</button>
+                <div id="reports-results" style="margin-top: 1.5rem;"></div>
+            </div>
+        </section>
+
+        <!-- Doctor Portal View -->
+        <section id="doctor-portal-section" class="tab-content">
+            <div class="card" style="max-width: 600px; margin: 0 auto;">
+                <h2 id="txt-doc-portal-title" style="margin-bottom: 1.5rem;">Doctor Calendar & Availability Toggle</h2>
+                <div class="form-group">
+                    <label>Select PHC Location</label>
+                    <select id="doc-mgmt-loc" onchange="loadDoctorsForMgmt()"></select>
+                </div>
+                <div class="form-group">
+                    <label>Select Doctor Profile</label>
+                    <select id="doc-mgmt-select"></select>
+                </div>
+                <div class="form-group">
+                    <label>Select Duty Date (Calendar)</label>
+                    <input type="date" id="doc-calendar-date">
+                </div>
+                <div class="form-group">
+                    <label>Today's Availability Status</label>
+                    <select id="doc-status-select">
+                        <option value="true">Available / On Duty</option>
+                        <option value="false">Absent / On Leave</option>
+                    </select>
+                </div>
+                <button class="btn-submit" onclick="updateDoctorDutyStatus()">Save Availability in DB</button>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        let currentLang = "en";
+        let isDoctorPortal = false;
+        let locationsData = [];
+
+        const translations = {
+            en: {
+                appTitle: "Smart PHC Healthcare Portal",
+                langToggle: "తెలుగు",
+                portalSwitchDoc: "Doctor Login",
+                portalSwitchPatient: "Patient Portal",
+                tabDoc: "Doctor Directory",
+                tabBook: "Book Appointment",
+                tabStatus: "Booking Status",
+                tabReports: "Medical Reports",
+                docHeading: "Doctors Available at Location",
+                filterLoc: "Select PHC Hospital Location:",
+                formHeading: "Book Appointment",
+                lblApptDate: "Select Appointment Date",
+                lblUid: "Unique ID / Identity Card Number",
+                lblName: "Patient Full Name",
+                lblSelectDoc: "Select Available Doctor",
+                lblSelectSlot: "Preferred Time Slot",
+                btnConfirm: "Generate Token",
+                statusHeading: "Check Appointment Status",
+                reportsHeading: "Patient Diagnostic & Health Reports",
+                roomTxt: "Location Room:"
+            },
+            te: {
+                appTitle: "స్మార్ట్ పి.హెచ్.సి వైద్య సేవలు",
+                langToggle: "English",
+                portalSwitchDoc: "వైద్యుల లాగిన్",
+                portalSwitchPatient: "రోగి పోర్టల్",
+                tabDoc: "వైద్యుల జాబితా",
+                tabBook: "అపాయింట్‌మెంట్ బుక్",
+                tabStatus: "బుకింగ్ స్థితి",
+                tabReports: "వైద్య నివేదికలు",
+                docHeading: "ఎంచుకున్న ప్రాంతంలో అందుబాటులో ఉన్న వైద్యులు",
+                filterLoc: "పి.హెచ్.సి ఆసుపత్రి ప్రాంతాన్ని ఎంచుకోండి:",
+                formHeading: "అపాయింట్‌మెంట్ బుక్ చేయండి",
+                lblApptDate: "అపాయింట్‌మెంట్ తేదీని ఎంచుకోండి",
+                lblUid: "ప్రత్యేక గుర్తింపు సంఖ్య (యూనిక్ ఐడి)",
+                lblName: "రోగి పూర్తి పేరు",
+                lblSelectDoc: "లభ్యత ఉన్న వైద్యుడిని ఎంచుకోండి",
+                lblSelectSlot: "సమయం ఎంచుకోండి",
+                btnConfirm: "టోకెన్ పొందండి",
+                statusHeading: "అపాయింట్‌మెంట్ బుకింగ్ స్థితి",
+                reportsHeading: "రోగి వైద్య పరిక్షల నివేదికలు",
+                roomTxt: "గది సంఖ్య:"
+            }
+        };
+
+        async function initApp() {
+            try {
+                const response = await fetch('/api/locations');
+                const data = await response.json();
+                if (data.success) {
+                    locationsData = data.locations;
+                    populateLocationDropdowns();
+                    await loadDoctorsForSelectedLocation();
+                    await loadDoctorsForBooking();
+                    await loadDoctorsForMgmt();
+                }
+            } catch (err) {
+                console.error("Initialization error:", err);
+            }
+            // Set default date picker to today's date
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.getElementById('appt-date-input').value = todayStr;
+            document.getElementById('doc-calendar-date').value = todayStr;
+        }
+
+        function populateLocationDropdowns() {
+            const filterLoc = document.getElementById('location-filter');
+            const bookingLoc = document.getElementById('booking-loc-select');
+            const mgmtLoc = document.getElementById('doc-mgmt-loc');
+
+            filterLoc.innerHTML = "";
+            bookingLoc.innerHTML = "";
+            mgmtLoc.innerHTML = "";
+
+            locationsData.forEach(loc => {
+                filterLoc.add(new Option(loc.name, loc.id));
+                bookingLoc.add(new Option(loc.name, loc.id));
+                mgmtLoc.add(new Option(loc.name, loc.id));
+            });
+        }
+
+        async function loadDoctorsForSelectedLocation() {
+            const locId = document.getElementById('location-filter').value;
+            if (!locId) return;
+            const container = document.getElementById('doctors-container');
+            container.innerHTML = "";
+
+            const res = await fetch(`/api/doctors/${locId}`);
+            const data = await res.json();
+
+            if (data.success) {
+                data.doctors.forEach(doc => {
+                    const dept = currentLang === 'en' ? doc.dept_en : doc.dept_te;
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <span class="badge ${doc.available ? 'badge-available' : 'badge-busy'}">
+                            ${doc.available ? (currentLang === 'en' ? 'Available' : 'లభ్యతలో ఉన్నారు') : (currentLang === 'en' ? 'Absent / On Leave' : 'సెలవులో ఉన్నారు')}
+                        </span>
+                        <h3>${doc.name}</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">${dept}</p>
+                        <hr style="margin: 0.8rem 0; border: none; border-top: 1px solid var(--border-color);">
+                        <p><strong>${translations[currentLang].roomTxt}</strong> ${doc.room}</p>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+        }
+
+        async function loadDoctorsForBooking() {
+            const locId = document.getElementById('booking-loc-select').value;
+            if (!locId) return;
+            const docSelect = document.getElementById('doc-select');
+            docSelect.innerHTML = "";
+
+            const res = await fetch(`/api/doctors/${locId}`);
+            const data = await res.json();
+
+            if (data.success) {
+                data.doctors.filter(d => d.available).forEach(doc => {
+                    const dept = currentLang === 'en' ? doc.dept_en : doc.dept_te;
+                    docSelect.add(new Option(`${doc.name} (${dept})`, doc.id));
+                });
+            }
+        }
+
+        async function loadDoctorsForMgmt() {
+            const locId = document.getElementById('doc-mgmt-loc').value;
+            if (!locId) return;
+            const mgmtSelect = document.getElementById('doc-mgmt-select');
+            mgmtSelect.innerHTML = "";
+
+            const res = await fetch(`/api/doctors/${locId}`);
+            const data = await res.json();
+
+            if (data.success) {
+                data.doctors.forEach(doc => {
+                    mgmtSelect.add(new Option(doc.name, doc.id));
+                });
+            }
+        }
+
+        async function handleBooking(event) {
+            event.preventDefault();
+            const date = document.getElementById('appt-date-input').value;
+            const uid = document.getElementById('uid-input').value;
+            const name = document.getElementById('name-input').value;
+            const location_id = document.getElementById('booking-loc-select').value;
+            const doctor_id = document.getElementById('doc-select').value;
+            const slot = document.getElementById('slot-select').value;
+
+            const res = await fetch('/api/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uid, name, location_id, doctor_id, slot, date })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                alert(currentLang === 'en' 
+                    ? `Appointment confirmed for ${date}! Token Number: #${data.token_number}`
+                    : `${date} తేదికి అపాయింట్‌మెంట్ ఖరారైంది! మీ టోకెన్ సంఖ్య: #${data.token_number}`);
+                document.getElementById('appointment-form').reset();
+                const todayStr = new Date().toISOString().split('T')[0];
+                document.getElementById('appt-date-input').value = todayStr;
+            } else {
+                alert("Error: " + data.message);
+            }
+        }
+
+        async function fetchPatientBookingStatus() {
+            const uid = document.getElementById('status-uid-input').value;
+            const resultsDiv = document.getElementById('status-results');
+            resultsDiv.innerHTML = "";
+
+            if (!uid) return alert("Please enter your Unique ID.");
+
+            const res = await fetch(`/api/patient-status/${uid}`);
+            const data = await res.json();
+
+            if (data.success && data.appointments.length > 0) {
+                data.appointments.forEach(app => {
+                    const box = document.createElement('div');
+                    box.className = 'status-card';
+                    box.innerHTML = `
+                        <p><strong>Patient Name:</strong> ${app.patient_name}</p>
+                        <p><strong>PHC Location:</strong> ${app.location}</p>
+                        <p><strong>Doctor:</strong> ${app.doctor_name} (${app.department})</p>
+                        <p><strong>Room:</strong> ${app.room}</p>
+                        <p><strong>Appointment Date:</strong> <span style="color: #0f4c81; font-weight: bold;">${app.date}</span></p>
+                        <p><strong>Time Slot:</strong> ${app.slot}</p>
+                        <p><strong>Token Number:</strong> #${app.token}</p>
+                        <p><strong>Status:</strong> <span style="color: green; font-weight: bold;">${app.status}</span></p>
+                    `;
+                    resultsDiv.appendChild(box);
+                });
+            } else {
+                resultsDiv.innerHTML = `<p style="color: red;">No active appointments found for ID: ${uid}</p>`;
+            }
+        }
+
+        async function fetchPatientReports() {
+            const uid = document.getElementById('reports-uid-input').value;
+            const resultsDiv = document.getElementById('reports-results');
+            resultsDiv.innerHTML = "";
+
+            if (!uid) return alert("Please enter your Unique ID.");
+
+            const res = await fetch(`/api/patient-reports/${uid}`);
+            const data = await res.json();
+
+            if (data.success && data.reports.length > 0) {
+                data.reports.forEach(rep => {
+                    const box = document.createElement('div');
+                    box.className = 'report-card';
+                    box.innerHTML = `
+                        <h3>${rep.title}</h3>
+                        <p><strong>Doctor:</strong> ${rep.doctor}</p>
+                        <p><strong>Report Date:</strong> ${rep.date}</p>
+                        <p><strong>Summary:</strong> ${rep.summary}</p>
+                        <p><strong>Status:</strong> <span style="color: green; font-weight: bold;">${rep.status}</span></p>
+                    `;
+                    resultsDiv.appendChild(box);
+                });
+            } else {
+                resultsDiv.innerHTML = `<p style="color: red;">No medical reports found for ID: ${uid}</p>`;
+            }
+        }
+
+        async function updateDoctorDutyStatus() {
+            const docId = document.getElementById('doc-mgmt-select').value;
+            const status = document.getElementById('doc-status-select').value === "true";
+
+            const res = await fetch('/api/doctor/availability', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ doctor_id: docId, available: status })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                alert("Status saved to SQL database!");
+                loadDoctorsForSelectedLocation();
+                loadDoctorsForBooking();
+            }
+        }
+
+        function switchPortal() {
+            isDoctorPortal = !isDoctorPortal;
+            document.getElementById('patient-nav').style.display = isDoctorPortal ? 'none' : 'flex';
+            document.getElementById('btn-portal-switch').innerText = isDoctorPortal ? translations[currentLang].portalSwitchPatient : translations[currentLang].portalSwitchDoc;
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            if (isDoctorPortal) {
+                document.getElementById('doctor-portal-section').classList.add('active');
+            } else {
+                document.getElementById('doctors-tab').classList.add('active');
+            }
+        }
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'te' : 'en';
+            const dict = translations[currentLang];
+
+            document.getElementById('txt-app-title').innerText = dict.appTitle;
+            document.getElementById('txt-lang-toggle').innerText = dict.langToggle;
+            document.getElementById('btn-portal-switch').innerText = isDoctorPortal ? dict.portalSwitchPatient : dict.portalSwitchDoc;
+
+            document.getElementById('tab-doc').innerText = dict.tabDoc;
+            document.getElementById('tab-book').innerText = dict.tabBook;
+            document.getElementById('tab-status').innerText = dict.tabStatus;
+            document.getElementById('tab-reports').innerText = dict.tabReports;
+
+            document.getElementById('txt-doc-heading').innerText = dict.docHeading;
+            document.getElementById('lbl-filter-loc').innerText = dict.filterLoc;
+            document.getElementById('txt-form-heading').innerText = dict.formHeading;
+            document.getElementById('lbl-appt-date').innerText = dict.lblApptDate;
+            document.getElementById('lbl-uid').innerText = dict.lblUid;
+            document.getElementById('lbl-patient-name').innerText = dict.lblName;
+            document.getElementById('lbl-select-doc').innerText = dict.lblSelectDoc;
+            document.getElementById('lbl-select-slot').innerText = dict.lblSelectSlot;
+            document.getElementById('btn-confirm-booking').innerText = dict.btnConfirm;
+
+            document.getElementById('txt-status-heading').innerText = dict.statusHeading;
+            document.getElementById('txt-reports-heading').innerText = dict.reportsHeading;
+
+            loadDoctorsForSelectedLocation();
+            loadDoctorsForBooking();
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
